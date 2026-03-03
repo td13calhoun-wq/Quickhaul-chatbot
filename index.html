@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuickHaul Junk Removal – Instant Quote</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- EmailJS for sending lead notifications -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+:root {
+  --orange:       #ff6b35;
+  --orange-dark:  #e8571f;
+  --navy:         #1a2332;
+  --navy-light:   #2d3748;
+  --slate:        #475569;
+  --slate-light:  #94a3b8;
+  --bg:           #f8fafc;
+  --white:        #ffffff;
+  --line:         #e2e8f0;
+  --success:      #10b981;
+  --shadow:       0 24px 80px rgba(26,35,50,0.20), 0 8px 24px rgba(26,35,50,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Outfit',sans-serif;
+  background:var(--bg);
+  min-height:100vh;
+  background-image:
+    linear-gradient(rgba(26,35,50,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,35,50,0.03) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+
+/* Demo label */
+.demo-label{
+  position:fixed;top:20px;left:50%;transform:translateX(-50%);
+  background:var(--white);border:1px solid var(--line);border-radius:24px;
+  padding:8px 20px;font-size:12px;color:var(--slate);font-weight:600;
+  letter-spacing:0.5px;box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  display:flex;align-items:center;gap:10px;z-index:10;
+}
+.demo-label span{
+  width:8px;height:8px;background:var(--success);border-radius:50%;
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.4);}
+  50%{box-shadow:0 0 0 8px rgba(16,185,129,0);}
+}
+
+/* Bubble button */
+.bubble{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  width:64px;height:64px;background:var(--orange);
+  border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 24px rgba(255,107,53,0.4);
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  animation:bubbleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.5s both;
+}
+@keyframes bubbleIn{
+  from{opacity:0;transform:scale(0) translateY(20px);}
+  to{opacity:1;transform:scale(1) translateY(0);}
+}
+.bubble:hover{
+  background:var(--orange-dark);
+  transform:scale(1.1);
+  box-shadow:0 8px 32px rgba(255,107,53,0.5);
+}
+.bubble.open{background:var(--navy);}
+.bubble svg{width:28px;height:28px;fill:white;}
+.bubble .x-svg{display:none;}
+.bubble.open .chat-svg{display:none;}
+.bubble.open .x-svg{display:block;}
+.notif{
+  position:absolute;top:0;right:0;
+  width:20px;height:20px;background:#ef4444;
+  border-radius:50%;border:3px solid var(--bg);
+  font-size:10px;color:white;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:100px;right:24px;z-index:998;
+  background:var(--white);border:1px solid var(--line);
+  border-radius:16px;padding:16px 20px;box-shadow:var(--shadow);
+  max-width:280px;display:flex;gap:12px;
+  animation:toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 1.5s both;
+}
+@keyframes toastIn{
+  from{opacity:0;transform:translateX(20px);}
+  to{opacity:1;transform:translateX(0);}
+}
+.toast-icon{
+  width:44px;height:44px;background:var(--orange);
+  border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.toast-icon svg{width:22px;height:22px;fill:white;}
+.toast-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.toast-msg{font-size:13px;color:var(--slate);line-height:1.4;}
+.toast-x{
+  position:absolute;top:10px;right:12px;
+  background:none;border:none;color:var(--slate-light);
+  font-size:16px;cursor:pointer;
+}
+
+/* Panel */
+.panel{
+  position:fixed;bottom:100px;right:24px;z-index:998;
+  width:400px;background:var(--white);border-radius:20px;
+  box-shadow:var(--shadow);border:1px solid var(--line);
+  display:flex;flex-direction:column;overflow:hidden;
+  max-height:600px;transform-origin:bottom right;
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  opacity:0;transform:scale(0.9) translateY(20px);
+  pointer-events:none;
+}
+.panel.open{
+  opacity:1;transform:scale(1) translateY(0);
+  pointer-events:all;
+}
+
+/* Trust banner - sits at very top */
+.trust-banner{
+  background:linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  padding:12px 20px;
+  border-bottom:1px solid var(--line);
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.trust-banner-icon{
+  width:16px;
+  height:16px;
+  flex-shrink:0;
+}
+.trust-banner-icon svg{
+  width:100%;
+  height:100%;
+  fill:#fbbf24;
+}
+.trust-banner-text{
+  font-size:12px;
+  color:var(--slate);
+  font-weight:600;
+  letter-spacing:0.3px;
+}
+
+/* Header */
+.head{
+  background:var(--orange);padding:18px 20px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.head-left{display:flex;align-items:center;gap:12px;}
+.head-logo{
+  width:48px;height:48px;background:rgba(255,255,255,0.2);
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  position:relative;flex-shrink:0;
+}
+.head-logo svg{width:24px;height:24px;fill:white;}
+.online{
+  position:absolute;bottom:-2px;right:-2px;
+  width:14px;height:14px;background:var(--success);
+  border-radius:50%;border:3px solid var(--orange);
+}
+.head-name{font-size:16px;font-weight:700;color:white;}
+.head-sub{font-size:12px;color:rgba(255,255,255,0.85);margin-top:2px;}
+.head-btns{display:flex;gap:8px;}
+.head-btn{
+  width:36px;height:36px;background:rgba(255,255,255,0.15);
+  border:none;border-radius:10px;color:white;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;
+}
+.head-btn:hover{background:rgba(255,255,255,0.25);}
+.head-btn svg{width:16px;height:16px;fill:white;}
+
+/* Progress bar */
+.progress{
+  background:var(--orange);padding:0 20px 14px;
+  flex-shrink:0;
+  transition:all 0.6s ease;
+  max-height:100px;
+  opacity:1;
+}
+.progress.complete{
+  background:var(--success);
+}
+.progress.hidden{
+  max-height:0;
+  padding:0 20px;
+  opacity:0;
+  overflow:hidden;
+}
+.progress-bar{
+  width:100%;height:6px;background:rgba(255,255,255,0.2);
+  border-radius:10px;overflow:hidden;position:relative;
+}
+.progress-fill{
+  height:100%;background:white;border-radius:10px;
+  transition:width 0.5s ease;
+}
+.progress-text{
+  font-size:11px;color:rgba(255,255,255,0.9);
+  margin-top:6px;font-weight:600;letter-spacing:0.3px;
+}
+
+/* Quick actions slider */
+.quick-wrapper{
+  background:var(--bg);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;
+  padding:14px 8px;
+  flex-shrink:0;
+  position:relative;
+  max-height:60px;
+  overflow:hidden;
+  transition:all 0.4s ease;
+}
+.quick-wrapper.hidden{
+  max-height:0;
+  padding:0 8px;
+  opacity:0;
+  border-bottom:none;
+}
+.q-arrow{
+  width:32px;height:32px;
+  background:white;
+  border:1px solid var(--line);
+  border-radius:50%;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--slate);
+  transition:all 0.2s;
+  flex-shrink:0;
+  box-shadow:0 2px 6px rgba(0,0,0,0.06);
+}
+.q-arrow:hover{
+  background:var(--orange);
+  color:white;
+  border-color:var(--orange);
+  transform:scale(1.08);
+}
+.q-arrow.left{margin-right:8px;}
+.q-arrow.right{margin-left:8px;}
+.quick{
+  flex:1;
+  display:flex;gap:8px;
+  overflow-x:auto;
+  scroll-behavior:smooth;
+}
+.quick::-webkit-scrollbar{display:none;}
+.q-chip{
+  background:var(--white);border:1.5px solid var(--line);
+  color:var(--navy);padding:7px 16px;border-radius:24px;
+  font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:all 0.2s;
+  flex-shrink:0;
+}
+.q-chip:hover{
+  background:var(--orange);color:white;
+  border-color:var(--orange);transform:translateY(-2px);
+}
+
+/* Messages */
+.msgs{
+  flex:1;overflow-y:auto;padding:20px 16px;
+  display:flex;flex-direction:column;gap:14px;min-height:0;
+}
+.msgs::-webkit-scrollbar{width:4px;}
+.msgs::-webkit-scrollbar-track{background:transparent;}
+.msgs::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+.m{
+  display:flex;gap:10px;
+  animation:mIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes mIn{
+  from{opacity:0;transform:translateY(12px)scale(0.95);}
+  to{opacity:1;transform:translateY(0)scale(1);}
+}
+.m.user{flex-direction:row-reverse;}
+.m-av{
+  width:32px;height:32px;border-radius:50%;
+  flex-shrink:0;margin-top:2px;
+  display:flex;align-items:center;justify-content:center;
+}
+.bot-av{background:var(--orange);}
+.bot-av svg{width:16px;height:16px;fill:white;}
+/* Truck icon SVG path */
+.truck-icon{width:18px;height:18px;}
+.user-av{background:var(--navy);color:white;font-size:12px;font-weight:700;}
+.m-inner{max-width:78%;}
+.m-bub{
+  padding:12px 16px;border-radius:18px;
+  font-size:14px;line-height:1.5;
+}
+.bot-m .m-bub{
+  background:var(--bg);color:var(--navy);
+  border-bottom-left-radius:4px;border:1px solid var(--line);
+}
+.m.user .m-bub{
+  background:var(--navy);color:white;
+  border-bottom-right-radius:4px;
+}
+.m-time{
+  font-size:10px;color:var(--slate-light);
+  margin-top:4px;padding:0 4px;
+}
+.m.user .m-time{text-align:right;}
+
+/* Typing */
+.typing{display:flex;gap:10px;align-items:center;}
+.t-bub{
+  background:var(--bg);border:1px solid var(--line);
+  padding:14px 18px;border-radius:18px;border-bottom-left-radius:4px;
+  display:flex;gap:6px;
+}
+.t-bub span{
+  width:7px;height:7px;background:var(--slate-light);
+  border-radius:50%;animation:tDot 1.2s infinite;
+}
+.t-bub span:nth-child(2){animation-delay:0.15s;}
+.t-bub span:nth-child(3){animation-delay:0.3s;}
+@keyframes tDot{
+  0%,60%,100%{transform:translateY(0);opacity:0.3;}
+  30%{transform:translateY(-6px);opacity:1;}
+}
+
+/* Photo upload */
+.photo-upload{
+  background:var(--bg);border:2px dashed var(--line);
+  border-radius:14px;padding:20px;margin-left:42px;
+  text-align:center;cursor:pointer;
+  transition:all 0.2s;animation:mIn 0.3s ease both;
+}
+.photo-upload:hover{
+  border-color:var(--orange);background:rgba(255,107,53,0.05);
+}
+.photo-upload-icon{
+  width:48px;height:48px;background:white;
+  border-radius:12px;margin:0 auto 12px;
+  display:flex;align-items:center;justify-content:center;
+}
+.photo-upload-icon svg{width:24px;height:24px;fill:var(--orange);}
+.photo-upload-text{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px;}
+.photo-upload-sub{font-size:11px;color:var(--slate);}
+.photo-preview{
+  margin-left:42px;display:flex;flex-wrap:wrap;gap:8px;
+  animation:mIn 0.3s ease both;
+}
+.photo-preview img{
+  width:80px;height:80px;border-radius:10px;
+  object-fit:cover;border:2px solid var(--line);
+}
+
+/* Time slot picker */
+.time-slots{
+  margin-left:42px;display:flex;flex-direction:column;gap:8px;
+  animation:mIn 0.3s ease both;
+}
+.time-slot{
+  background:white;border:2px solid var(--line);
+  border-radius:12px;padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:all 0.2s;
+}
+.time-slot:hover{
+  border-color:var(--orange);background:rgba(255,107,53,0.05);
+}
+.ts-left{display:flex;align-items:center;gap:10px;}
+.ts-icon{
+  width:36px;height:36px;background:var(--bg);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+}
+.ts-icon svg{width:18px;height:18px;fill:var(--orange);}
+.ts-time{font-size:14px;font-weight:700;color:var(--navy);}
+.ts-date{font-size:12px;color:var(--slate);margin-top:2px;}
+.ts-badge{
+  background:linear-gradient(135deg, #ff6b35, #e8571f);
+  color:white;font-size:10px;font-weight:700;
+  padding:4px 10px;border-radius:20px;
+  letter-spacing:0.3px;
+}
+
+/* Booking form */
+/* Booking form */
+.book-form{
+  background:transparent;
+  border-radius:14px;padding:0;margin-left:42px;
+  animation:mIn 0.3s ease both;
+}
+.contact-card{
+  background:#ffffff;
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.06);
+}
+.bf-title{
+  font-size:15px;font-weight:700;color:var(--navy);
+  margin-bottom:18px;
+}
+.bf-row{display:flex;flex-direction:column;gap:0;}
+.form-group{
+  margin-bottom:16px;
+}
+.field-label{
+  display:block;
+  font-size:13px;
+  font-weight:600;
+  color:var(--navy);
+  margin-bottom:6px;
+}
+.field-optional{
+  font-weight:400;
+  color:var(--slate-light);
+}
+.field-helper{
+  font-size:11px;
+  color:var(--slate-light);
+  margin-top:5px;
+  line-height:1.4;
+}
+.bf-input{
+  border:1.5px solid #d1d5db;
+  border-radius:10px;
+  padding:12px 14px;
+  font-family:'Outfit',sans-serif;
+  font-size:14px;
+  color:var(--navy);
+  outline:none;
+  background:white;
+  transition:all 0.2s;
+  width:100%;
+}
+.bf-input:focus{
+  border-color:var(--orange);
+  box-shadow:0 0 0 3px rgba(255,107,53,0.1);
+}
+.bf-textarea{
+  resize:vertical;
+  min-height:56px;
+  font-family:'Outfit',sans-serif;
+  line-height:1.5;
+}
+.bf-submit{
+  background:var(--orange);color:white;border:none;
+  border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;
+  transition:all 0.2s;margin-top:6px;
+  width:100%;
+}
+.bf-submit:hover{
+  background:var(--orange-dark);
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(255,107,53,0.3);
+}
+.bf-trust{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-size:12px;
+  color:var(--slate-light);
+  text-align:center;
+  margin-top:14px;
+  line-height:1.5;
+}
+.trust-icon{
+  flex-shrink:0;
+  opacity:0.7;
+}
+
+/* Input bar */
+.input-bar{
+  padding:14px 16px;border-top:1px solid var(--line);
+  display:flex;gap:10px;align-items:center;
+  flex-shrink:0;background:white;
+}
+
+/* Complete button (appears after booking) */
+.complete-btn{
+  width:100%;
+  background:var(--success);
+  color:white;
+  border:none;
+  border-radius:12px;
+  padding:14px;
+  font-family:'Outfit',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  box-shadow:0 4px 12px rgba(16,185,129,0.3);
+}
+.complete-btn:hover{
+  background:#059669;
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(16,185,129,0.4);
+}
+.complete-btn-wrapper{
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+  background:white;
+  flex-shrink:0;
+  animation:slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes slideUp{
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.input-wrap{
+  flex:1;background:var(--bg);border:1.5px solid var(--line);
+  border-radius:12px;display:flex;align-items:center;
+  padding:0 16px;height:44px;transition:all 0.2s;
+}
+.input-wrap:focus-within{
+  border-color:var(--orange);background:white;
+  box-shadow:0 0 0 3px rgba(255,107,53,0.1);
+}
+.input-wrap input{
+  border:none;outline:none;background:transparent;
+  font-family:'Outfit',sans-serif;font-size:14px;
+  color:var(--navy);width:100%;
+}
+.input-wrap input::placeholder{color:var(--slate-light);}
+.send{
+  width:44px;height:44px;background:var(--orange);
+  border:none;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;flex-shrink:0;
+}
+.send:hover{
+  background:var(--orange-dark);
+  transform:scale(1.05);
+}
+.send svg{width:18px;height:18px;fill:white;}
+
+.footer-trust{
+  text-align:center;padding:10px;font-size:10px;
+  color:var(--slate-light);background:var(--bg);
+  border-top:1px solid var(--line);flex-shrink:0;
+  letter-spacing:0.5px;font-weight:500;
+}
+</style>
+</head>
+<body>
+
+<div class="demo-label">
+  <span></span>
+  QuickHaul Junk Removal — Instant Quote & Booking
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div class="toast-icon">
+    <svg viewBox="0 0 24 24"><path d="M18 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-9H17V12h4.46L19.5 9.5zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM20 8l3 4v5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3H9c0 1.66-1.34 3-3 3s-3-1.34-3-3H1V6c0-1.1.9-2 2-2h14v4h3z" fill="white"/></svg>
+  </div>
+  <div>
+    <div class="toast-name">Get your quote in 60 seconds</div>
+    <div class="toast-msg">We haul it all — same-day service available!</div>
+  </div>
+  <button class="toast-x" onclick="dismissToast()">✕</button>
+</div>
+
+<!-- Chat panel -->
+<div class="panel" id="panel">
+
+  <!-- Trust banner at very top -->
+  <div class="trust-banner">
+    <div class="trust-banner-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+    </div>
+    <div class="trust-banner-text">Your Trustpilot or Google Review Here</div>
+  </div>
+
+  <div class="head">
+    <div class="head-left">
+      <div class="head-logo">
+        <svg viewBox="0 0 24 24"><path d="M18 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-9H17V12h4.46L19.5 9.5zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM20 8l3 4v5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3H9c0 1.66-1.34 3-3 3s-3-1.34-3-3H1V6c0-1.1.9-2 2-2h14v4h3z" fill="white"/></svg>
+        <div class="online"></div>
+      </div>
+      <div>
+        <div class="head-name">QuickHaul Junk Removal</div>
+        <div class="head-sub">Fastest way to book your pickup</div>
+      </div>
+    </div>
+    <div class="head-btns">
+      <button class="head-btn" onclick="alert('Call now: (555) 789-1234')">
+        <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 10.58 10.58 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>
+      </button>
+      <button class="head-btn" onclick="toggleChat()">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:20%"></div>
+    </div>
+    <div class="progress-text" id="progressText">Step 1 of 5 — Tell us what you need removed</div>
+  </div>
+
+  <!-- Category slider with arrows -->
+  <div class="quick-wrapper">
+    <button class="q-arrow left" onclick="scrollQuick(-200)">‹</button>
+    <div class="quick" id="quickBar">
+      <button class="q-chip" onclick="sendQuick('I need furniture removed')">Furniture</button>
+      <button class="q-chip" onclick="sendQuick('Appliance pickup')">Appliances</button>
+      <button class="q-chip" onclick="sendQuick('Mattress removal')">Mattress Removal</button>
+      <button class="q-chip" onclick="sendQuick('Garage cleanout')">Garage Cleanout</button>
+      <button class="q-chip" onclick="sendQuick('Construction debris removal')">Construction Debris</button>
+      <button class="q-chip" onclick="sendQuick('Yard waste removal')">Yard Waste</button>
+      <button class="q-chip" onclick="sendQuick('Full house cleanout')">Full House Cleanout</button>
+    </div>
+    <button class="q-arrow right" onclick="scrollQuick(200)">›</button>
+  </div>
+
+  <div class="msgs" id="msgs">
+    <div class="m bot-m">
+      <div class="m-av bot-av">
+        <svg viewBox="0 0 24 24"><path d="M18 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-9H17V12h4.46L19.5 9.5zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM20 8l3 4v5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3H9c0 1.66-1.34 3-3 3s-3-1.34-3-3H1V6c0-1.1.9-2 2-2h14v4h3z" fill="white"/></svg>
+      </div>
+      <div class="m-inner">
+        <div class="m-bub">Hey! I'll help you get a <strong>free quote</strong> and book your pickup in under 60 seconds.<br><br>What do you need hauled away?</div>
+        <div class="m-time">Just now</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <div class="input-wrap">
+      <input type="text" id="inp" placeholder="e.g., Old couch and mattress…" onkeydown="if(event.key==='Enter')send()" />
+    </div>
+    <button class="send" onclick="send()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+
+  <div class="footer-trust">Licensed & Insured · Same-Day Service · No Hidden Fees</div>
+</div>
+
+<!-- Bubble -->
+<button class="bubble" id="bubble" onclick="toggleChat()">
+  <svg class="chat-svg" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+  <svg class="x-svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  <div class="notif">1</div>
+</button>
+
+<script>
+// ============================================
+// CLIENT CONFIGURATION - EDIT FOR EACH CLIENT
+// ============================================
+const CLIENT_CONFIG = {
+  businessName: 'QuickHaul Junk Removal',
+  businessPhone: '(555) 789-1234',
+  businessEmail: 'owner@quickhaul.com', // Where lead notifications are sent
+  
+  // EmailJS Configuration (get these from emailjs.com dashboard)
+  emailjs: {
+    serviceId: 'YOUR_EMAILJS_SERVICE_ID',
+    templateId: 'YOUR_EMAILJS_TEMPLATE_ID',
+    publicKey: 'YOUR_EMAILJS_PUBLIC_KEY'
+  },
+  
+  // Google Sheets Configuration (CONFIGURED)
+  sheetsWebhook: 'https://script.google.com/macros/s/AKfycbyCWzWmhOjDCkPBucAiJO4NNazYAfSnQvc1t7oxcnwbGS2ykvqc81F5WqI_qyf43Myd/exec',
+  sheetsToken: '4lF1EGfpoKEJSFgGJytgAql5q5GICUO9'
+};
+// ============================================
+
+// ============================================
+// STATE-DRIVEN PROGRESS SYSTEM
+// Workflow-based: Progress when ENTERING stage, not completing
+// ============================================
+
+// Check if string looks like a valid address
+function looksLikeAddress(s) {
+  if (!s || s.length < 8) return false;
+  const lower = s.toLowerCase();
+  
+  // Must have a number AND a street type
+  const hasNumber = /\d+/.test(lower);
+  const hasStreetType = /(st|street|ave|avenue|rd|road|dr|drive|ln|lane|blvd|boulevard|ct|court|way|place|pl|circle|cir|parkway|pkwy)/.test(lower);
+  
+  return hasNumber && hasStreetType;
+}
+
+// Check if we have a valid captured address
+function hasValidAddress(addr) {
+  return typeof addr === "string" && addr.trim().length > 6;
+  // Optional stricter validation:
+  // return looksLikeAddress(addr);
+}
+
+// Check if ready to show time slots (STRICT GATING)
+function readyForSlots(lead) {
+  const photosDone = (lead.photos && lead.photos > 0) || lead.photosSkipped;
+  const addressDone = hasValidAddress(lead.address);
+  return photosDone && addressDone && !lead.time;
+}
+
+// WORKFLOW-BASED: Compute stage from WORKFLOW FLAGS (entering stage) not just data completion
+function computeStageFromLead(lead) {
+  // Step 6 – Booking confirmed
+  if (lead.booked) return 6;
+  
+  // Step 5 – Contact stage (form shown)
+  if (lead.contactFormShown) return 5;
+  
+  // Step 4 – Time selected or slots shown
+  if (lead.slotsShown || lead.time) return 4;
+  
+  // Step 3 – Address stage
+  if (lead.addressAsked || hasValidAddress(lead.address)) return 3;
+  
+  // Step 2 – Photo stage
+  if (lead.photoAsked || lead.photos > 0 || lead.photosSkipped) return 2;
+  
+  // Step 1 – Items described
+  if (lead.itemsDescribed) return 1;
+  
+  return 1; // Default
+}
+
+// Sync progress bar to match leadData state
+function syncProgress() {
+  const nextStage = computeStageFromLead(leadData);
+  if (nextStage > stage) {
+    updateProgress(nextStage);
+  }
+}
+
+let isOpen=false;
+let hist=[];
+let stage=1;
+let leadData={
+  // Data fields
+  itemsDescribed: false,
+  photos: 0,
+  photosSkipped: false,
+  address: "",
+  time: "",
+  name: "",
+  phone: "",
+  email: "",
+  
+  // Workflow flags
+  photoAsked: false,
+  addressAsked: false,
+  slotsShown: false,
+  contactFormShown: false,
+  booked: false  // NEW: Booking confirmed
+};
+
+const SYS=`You are a friendly, efficient lead qualification assistant for QuickHaul Junk Removal. Your job is to book estimates by collecting information in this order, ONE STEP AT A TIME:
+
+STEP 1: WHAT needs removed (be specific — furniture, appliances, construction debris, full house cleanout?)
+
+STEP 2: ASK FOR PHOTOS (optional) — Say: "Quick favor — can you send a photo? It helps me give you an accurate quote." 
+- If they say they don't have photos or can't provide them: "No worries, we can work without it!"
+- WAIT for their response about photos before asking for address
+- Don't ask for address in the same message as photos
+
+STEP 3: SERVICE ADDRESS — After photos are handled, ask: "What's the service address where we'll be picking this up?"
+- Only ask for address AFTER the photo discussion is complete
+- Don't combine this with the photo question
+
+STEP 4: PROVIDE PRICE ESTIMATE based on volume:
+- Small load (1-2 items): $150-250
+- Medium load (3-6 items): $300-500  
+- Large load (7-12 items): $600-900
+- Full house cleanout: $1200-2500+
+
+Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out."
+
+STEP 5: OFFER TIME SLOTS — The system will show 3 available time slots automatically.
+
+If they say none of those work or want a different time:
+- Ask: "No problem! What day and time would work better for you?"
+- When they suggest a time, check if it falls within our available windows:
+  * Weekdays: 9-11am, 2-4pm, 4-6pm
+  * Weekends: 10am-12pm, 1-3pm
+- If their time is within available windows: "Perfect! I've got you scheduled for [their time]."
+- If their time is NOT available: "We don't have availability at [their time], but we have openings at [suggest closest available window]. Would that work?"
+- Once a time is confirmed, the system will advance to collect contact info.
+
+STEP 6: COLLECT NAME, PHONE & EMAIL — Say: "Perfect! To lock in your booking, I need your name and phone number. (Email too if you'd like a confirmation sent.)"
+
+IMPORTANT: Ask for ONE thing at a time. Don't combine photo + address questions. Let them respond between each step.
+
+Keep responses SHORT (2-3 sentences). Be friendly but efficient. Move them toward booking quickly.
+
+If they ask common questions, answer BRIEFLY then return to the current step:
+- "Do you take mattresses?" → "Yes, we take mattresses." (then return to current question)
+- "How much does it cost?" → "It depends on volume — typically $150-900 for most jobs." (then return to current question)
+- "Are you licensed?" → "Yes, fully licensed and insured." (then return to current question)
+
+Never negotiate specific pricing. Stay professional and positive.
+
+Current stage: Step {STAGE} of 5`;
+
+function scrollQuick(amount){
+  const bar=document.getElementById('quickBar');
+  bar.scrollLeft+=amount;
+}
+
+function hideCategories(){
+  const wrapper=document.querySelector('.quick-wrapper');
+  if(wrapper)wrapper.classList.add('hidden');
+}
+
+function updateProgress(step){
+  // Verify we have the required data before allowing progress
+  if(step===2 && !leadData.itemsDescribed) return;
+  if(step===3 && !leadData.itemsDescribed) return;
+  if(step===3 && stage===2 && !leadData.photos && !leadData.photosSkipped) return;
+  if(step===4 && !leadData.address && !leadData.photosSkipped && !leadData.photos) return;
+  if(step===5 && !leadData.time) return;
+  if(step===6 && !leadData.contactFormShown) return;
+  
+  stage=step;
+  const pct=[0,20,40,60,80,90,100][step];
+  const labels=[
+    '',
+    'Step 1 of 5 — Tell us what you need removed',
+    'Step 2 of 5 — Upload photos for accurate quote',
+    'Step 3 of 5 — Confirm your location',
+    'Step 4 of 5 — Choose your pickup time',
+    'Final Step — Enter your contact info',
+    'Booking Confirmed'
+  ];
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressText').textContent=labels[step];
+  
+  // Hide categories once we move past step 1
+  if(step>=2){
+    hideCategories();
+  }
+}
+
+function toggleChat(){
+  isOpen=!isOpen;
+  document.getElementById('panel').classList.toggle('open',isOpen);
+  document.getElementById('bubble').classList.toggle('open',isOpen);
+  const n=document.querySelector('.notif');
+  if(n)n.style.display='none';
+  dismissToast();
+}
+
+function dismissToast(){
+  const t=document.getElementById('toast');
+  if(t)t.style.display='none';
+}
+
+function ts(){
+  return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+function scroll(){
+  const m=document.getElementById('msgs');
+  m.scrollTop=m.scrollHeight;
+}
+
+function addMsg(role,html){
+  const wrap=document.getElementById('msgs');
+  const row=document.createElement('div');
+  row.className=`m ${role==='user'?'user':'bot-m'}`;
+  const av=document.createElement('div');
+  av.className=`m-av ${role==='user'?'user-av':'bot-av'}`;
+  if(role==='user'){
+    av.textContent='You';
+  }else{
+    av.innerHTML=`<svg viewBox="0 0 24 24"><path d="M18 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-9H17V12h4.46L19.5 9.5zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM20 8l3 4v5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3H9c0 1.66-1.34 3-3 3s-3-1.34-3-3H1V6c0-1.1.9-2 2-2h14v4h3z" fill="white"/></svg>`;
+  }
+  const inner=document.createElement('div');
+  inner.className='m-inner';
+  const bub=document.createElement('div');
+  bub.className='m-bub';
+  bub.innerHTML=html.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  const time=document.createElement('div');
+  time.className='m-time';
+  time.textContent=ts();
+  inner.appendChild(bub);
+  inner.appendChild(time);
+  row.appendChild(av);
+  row.appendChild(inner);
+  wrap.appendChild(row);
+  scroll();
+}
+
+function showTyping(){
+  const wrap=document.getElementById('msgs');
+  const row=document.createElement('div');
+  row.id='typRow';
+  row.className='typing';
+  const av=document.createElement('div');
+  av.className='m-av bot-av';
+  av.innerHTML=`<svg viewBox="0 0 24 24"><path d="M18 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-9H17V12h4.46L19.5 9.5zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM20 8l3 4v5h-2c0 1.66-1.34 3-3 3s-3-1.34-3-3H9c0 1.66-1.34 3-3 3s-3-1.34-3-3H1V6c0-1.1.9-2 2-2h14v4h3z" fill="white"/></svg>`;
+  const bub=document.createElement('div');
+  bub.className='t-bub';
+  bub.innerHTML='<span></span><span></span><span></span>';
+  row.appendChild(av);
+  row.appendChild(bub);
+  wrap.appendChild(row);
+  scroll();
+}
+
+function removeTyping(){
+  const el=document.getElementById('typRow');
+  if(el)el.remove();
+}
+
+function showPhotoUpload(){
+  const wrap=document.getElementById('msgs');
+  const div=document.createElement('div');
+  div.className='photo-upload';
+  div.id='photoBlock';
+  div.innerHTML=`
+    <div class="photo-upload-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+    </div>
+    <div class="photo-upload-text">Upload Photos</div>
+    <div class="photo-upload-sub">Tap to select images</div>
+    <input type="file" accept="image/*" multiple style="display:none" id="photoInput" onchange="handlePhotos(event)">
+  `;
+  div.onclick=()=>document.getElementById('photoInput').click();
+  wrap.appendChild(div);
+  scroll();
+  
+  // WORKFLOW FLAG: Photo stage begins when UI is shown
+  leadData.photoAsked = true;
+  syncProgress();
+}
+
+function handlePhotos(e){
+  const files=e.target.files;
+  if(!files.length)return;
+  document.getElementById('photoBlock')?.remove();
+  const wrap=document.getElementById('msgs');
+  const preview=document.createElement('div');
+  preview.className='photo-preview';
+  for(let i=0;i<Math.min(files.length,4);i++){
+    const img=document.createElement('img');
+    img.src=URL.createObjectURL(files[i]);
+    preview.appendChild(img);
+  }
+  wrap.appendChild(preview);
+  scroll();
+  setTimeout(()=>{
+    addMsg('user',`Uploaded ${files.length} photo${files.length>1?'s':''}`);
+    
+    // STATE UPDATE: Photos uploaded
+    leadData.photos=files.length;
+    leadData.photosSkipped=false;
+    syncProgress();
+    
+    doSend('[SYSTEM: User uploaded photos, now ask for service address]');
+  },400);
+}
+
+function showTimeSlots(){
+  const wrap=document.getElementById('msgs');
+  const div=document.createElement('div');
+  div.className='time-slots';
+  div.id='slotsBlock';
+  
+  // Generate dynamic time slots based on current time
+  const slots = generateAvailableSlots();
+  
+  let slotsHTML = '';
+  slots.forEach((slot, index) => {
+    const urgencyBadge = index === 0 ? '<div class="ts-badge">Limited availability</div>' : 
+                         index === 1 ? '<div class="ts-badge">Few openings left</div>' : '';
+    
+    slotsHTML += `
+    <div class="time-slot" onclick="selectSlot('${slot.display}')">
+      <div class="ts-left">
+        <div class="ts-icon">
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <div>
+          <div class="ts-time">${slot.display}</div>
+          <div class="ts-date">${slot.description}</div>
+        </div>
+      </div>
+      ${urgencyBadge}
+    </div>`;
+  });
+  
+  div.innerHTML = slotsHTML;
+  wrap.appendChild(div);
+  scroll();
+  
+  // WORKFLOW FLAG: Time slot stage begins when UI is shown
+  leadData.slotsShown = true;
+  syncProgress();
+}
+
+// Generate available time slots based on current date/time
+function generateAvailableSlots() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const slots = [];
+  
+  // Configuration: Available time windows (customize per client)
+  const AVAILABLE_WINDOWS = [
+    { start: 9, end: 11, label: '9-11am' },
+    { start: 14, end: 16, label: '2-4pm' },
+    { start: 16, end: 18, label: '4-6pm' }
+  ];
+  
+  // Helper function to get day name
+  function getDayName(date) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[date.getDay()];
+  }
+  
+  // Helper function to format date display
+  function formatSlotDate(daysAhead) {
+    const slotDate = new Date(now);
+    slotDate.setDate(slotDate.getDate() + daysAhead);
+    const dayName = getDayName(slotDate);
+    
+    if (daysAhead === 0) return 'Today';
+    if (daysAhead === 1) return 'Tomorrow';
+    return dayName; // e.g., "Friday", "Saturday"
+  }
+  
+  // Generate slots for next 3 days
+  for (let daysAhead = 0; daysAhead < 3 && slots.length < 3; daysAhead++) {
+    const isToday = daysAhead === 0;
+    
+    AVAILABLE_WINDOWS.forEach(window => {
+      if (slots.length >= 3) return; // Only show 3 slots max
+      
+      // Skip if it's today and the time slot has already passed
+      if (isToday && currentHour >= window.end) return;
+      
+      // Skip if it's today and less than 2 hours until slot starts
+      if (isToday && (window.start - currentHour) < 2) return;
+      
+      const dayLabel = formatSlotDate(daysAhead);
+      const description = daysAhead === 0 ? 'Same-day service' : 
+                         daysAhead === 1 ? 'Next-day service' : 
+                         'Available';
+      
+      slots.push({
+        display: `${dayLabel} ${window.label}`,
+        description: description,
+        daysAhead: daysAhead,
+        window: window
+      });
+    });
+  }
+  
+  // If somehow no slots are available (shouldn't happen), add tomorrow's first slot
+  if (slots.length === 0) {
+    slots.push({
+      display: `Tomorrow ${AVAILABLE_WINDOWS[0].label}`,
+      description: 'Next-day service',
+      daysAhead: 1,
+      window: AVAILABLE_WINDOWS[0]
+    });
+  }
+  
+  return slots;
+}
+
+function selectSlot(time){
+  document.getElementById('slotsBlock')?.remove();
+  addMsg('user',time);
+  
+  // STATE UPDATE: Time selected
+  leadData.time=time;
+  syncProgress();
+  
+  showBookingForm();
+}
+
+function showBookingForm(){
+  const wrap=document.getElementById('msgs');
+  const form=document.createElement('div');
+  form.className='book-form';
+  form.id='bookBlock';
+  form.innerHTML=`
+    <div class="contact-card">
+      <div class="bf-title">Almost done — confirm your booking</div>
+      <div class="bf-row">
+        <div class="form-group">
+          <label class="field-label">Full Name</label>
+          <input class="bf-input" id="bfName" placeholder="John Smith" type="text" required/>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Phone Number</label>
+          <input class="bf-input" id="bfPhone" placeholder="(555) 123-4567" type="tel" required/>
+          <div class="field-helper">We'll text you when we're on the way.</div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Email <span class="field-optional">(optional)</span></label>
+          <input class="bf-input" id="bfEmail" placeholder="john@email.com" type="email"/>
+          <div class="field-helper">For confirmation receipt.</div>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Special Instructions <span class="field-optional">(optional)</span></label>
+          <textarea class="bf-input bf-textarea" id="bfNotes" placeholder="Gate code, apartment number, or anything we should know." rows="2"></textarea>
+        </div>
+        <button class="bf-submit" onclick="submitBooking()">Confirm Booking</button>
+        <div class="bf-trust">
+          <svg class="trust-icon" viewBox="0 0 12 16" width="12" height="16">
+            <path fill="currentColor" d="M10 5H9V3c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v2H2c-.6 0-1 .4-1 1v8c0 .6.4 1 1 1h8c.6 0 1-.4 1-1V6c0-.6-.4-1-1-1zM4 3c0-.6.4-1 1-1h2c.6 0 1 .4 1 1v2H4V3z"/>
+          </svg>
+          Your information is secure and used only to coordinate your pickup.
+        </div>
+      </div>
+    </div>`;
+  wrap.appendChild(form);
+  scroll();
+  
+  // WORKFLOW FLAG: Contact form stage begins when form is shown
+  leadData.contactFormShown = true;
+  syncProgress();
+}
+
+function submitBooking(){
+  const name=document.getElementById('bfName')?.value.trim();
+  const phone=document.getElementById('bfPhone')?.value.trim();
+  const email=document.getElementById('bfEmail')?.value.trim();
+  const notes=document.getElementById('bfNotes')?.value.trim();
+  
+  if(!name||!phone){alert('Please enter your name and phone number.');return;}
+  
+  // STATE UPDATE: Contact info captured and booking confirmed
+  leadData.name=name;
+  leadData.phone=phone;
+  if(email)leadData.email=email;
+  if(notes)leadData.notes=notes;  // NEW: Capture special instructions
+  leadData.booked=true;
+  syncProgress(); // This will advance to Step 6 (100%)
+  
+  document.getElementById('bookBlock')?.remove();
+  
+  const reply=`Perfect, **${name}**! Your pickup is scheduled for **${leadData.time}**. We'll call **${phone}** within 30 minutes to confirm${email?', and send confirmation to **'+email+'**':''}, and you'll get a text reminder 1 hour before we arrive. See you soon!`;
+  hist.push({role:'assistant',content:reply});
+  addMsg('bot',reply);
+  
+  // Send lead notifications (email + Google Sheets)
+  sendLeadNotifications(leadData);
+  
+  // Replace input bar with Complete button
+  const inputBar=document.querySelector('.input-bar');
+  if(inputBar){
+    inputBar.style.display='none';
+  }
+  
+  const panel=document.getElementById('panel');
+  const btnWrapper=document.createElement('div');
+  btnWrapper.className='complete-btn-wrapper';
+  btnWrapper.innerHTML=`<button class="complete-btn" onclick="completeBooking()">Complete Booking ✓</button>`;
+  panel.appendChild(btnWrapper);
+  
+  console.log('📋 LEAD CAPTURED - Notifications sent to:', CLIENT_CONFIG.businessEmail);
+}
+
+function completeBooking(){
+  // Turn progress bar green then fade it out
+  const progressBar=document.querySelector('.progress');
+  if(progressBar){
+    // Set to 100% and turn green
+    document.getElementById('progressFill').style.width='100%';
+    document.getElementById('progressText').textContent='✓ Booking complete!';
+    progressBar.style.background='#10b981';
+    
+    // Fade out after 2 seconds
+    setTimeout(()=>{
+      progressBar.classList.add('hidden');
+    },2000);
+  }
+  
+  // Remove the complete button
+  document.querySelector('.complete-btn-wrapper')?.remove();
+  
+  // Show input bar again
+  const inputBar=document.querySelector('.input-bar');
+  if(inputBar){
+    inputBar.style.display='flex';
+  }
+}
+
+// ============================================
+// LEAD NOTIFICATION SYSTEM
+// ============================================
+
+async function sendLeadNotifications(leadData) {
+  console.log('📧 Sending lead notifications...', leadData);
+  
+  // Send Email Notification
+  await sendEmailNotification(leadData);
+  
+  // Log to Google Sheets
+  await logToGoogleSheets(leadData);
+}
+
+async function sendEmailNotification(leadData) {
+  // Check if EmailJS is configured
+  if (!CLIENT_CONFIG.emailjs.publicKey || CLIENT_CONFIG.emailjs.publicKey === 'YOUR_EMAILJS_PUBLIC_KEY') {
+    console.log('⚠️ EmailJS not configured - skipping email notification');
+    return;
+  }
+  
+  try {
+    // Initialize EmailJS
+    emailjs.init(CLIENT_CONFIG.emailjs.publicKey);
+    
+    // Prepare email data
+    const emailData = {
+      to_email: CLIENT_CONFIG.businessEmail,
+      business_name: CLIENT_CONFIG.businessName,
+      customer_name: leadData.name,
+      customer_phone: leadData.phone,
+      customer_email: leadData.email || 'Not provided',
+      customer_address: leadData.address || 'Not provided',
+      time_slot: leadData.time,
+      special_instructions: leadData.notes || 'None',  // NEW: Include notes
+      items_described: leadData.itemsDescribed ? 'Yes' : 'No',
+      photos_uploaded: leadData.photos ? `${leadData.photos} photo(s)` : 'No photos',
+      booking_date: new Date().toLocaleString('en-US', { 
+        dateStyle: 'medium', 
+        timeStyle: 'short' 
+      })
+    };
+    
+    // Send via EmailJS
+    await emailjs.send(
+      CLIENT_CONFIG.emailjs.serviceId,
+      CLIENT_CONFIG.emailjs.templateId,
+      emailData
+    );
+    
+    console.log('✅ Email notification sent successfully');
+  } catch (error) {
+    console.error('❌ Email notification failed:', error);
+  }
+}
+
+async function logToGoogleSheets(leadData) {
+  // Check if Google Sheets webhook is configured
+  if (!CLIENT_CONFIG.sheetsWebhook || CLIENT_CONFIG.sheetsWebhook === 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL') {
+    console.log('⚠️ Google Sheets not configured - skipping sheet logging');
+    return;
+  }
+  
+  if (!CLIENT_CONFIG.sheetsToken || CLIENT_CONFIG.sheetsToken === 'YOUR_GOOGLE_SHEETS_TOKEN') {
+    console.log('⚠️ Google Sheets token not configured - skipping sheet logging');
+    return;
+  }
+  
+  try {
+    const payload = {
+      token: CLIENT_CONFIG.sheetsToken,
+      source: 'quickhaul-chatbot',
+      name: leadData.name,
+      phone: leadData.phone,
+      email: leadData.email || '',
+      address: leadData.address || '',
+      time: leadData.time,
+      timeSlot: leadData.time, // Apps Script checks both fields
+      photos: leadData.photos || 0,
+      photosUploaded: leadData.photos || 0, // Apps Script checks both fields
+      specialInstructions: leadData.notes || ''
+    };
+    
+    const res = await fetch(CLIENT_CONFIG.sheetsWebhook, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8" // FIXED: Avoid CORS preflight
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const json = await res.json().catch(() => ({}));
+    
+    if (!res.ok || !json.ok) {
+      throw new Error(json.error || 'Sheets logging failed');
+    }
+    
+    console.log('✅ Lead logged to Google Sheets');
+  } catch (error) {
+    console.error('❌ Google Sheets logging failed:', error);
+  }
+}
+
+async function sendQuick(txt){
+  if(!isOpen)toggleChat();
+  hideCategories(); // Hide categories when user selects one
+  await doSend(txt);
+}
+
+async function send(){
+  const inp=document.getElementById('inp');
+  const txt=inp.value.trim();
+  if(!txt)return;
+  inp.value='';
+  await doSend(txt);
+}
+
+async function doSend(txt){
+  if(!txt.startsWith('[SYSTEM'))addMsg('user',txt);
+  hist.push({role:'user',content:txt});
+  showTyping();
+
+  // ============================================
+  // WORKFLOW FLAGS - Set when entering stages
+  // ============================================
+  
+  // ITEMS DESCRIBED: First normal user message
+  if (!txt.startsWith('[SYSTEM') && !leadData.itemsDescribed) {
+    leadData.itemsDescribed = true;
+    syncProgress();
+  }
+  
+  // ============================================
+  // DATA CAPTURE - Check user input for data
+  // ============================================
+  
+  // Check if user provided address
+  if(!leadData.address && looksLikeAddress(txt)){
+    leadData.address = txt.trim();
+    syncProgress();
+  }
+  
+  // Check if user is skipping photos explicitly
+  if(stage === 2 && leadData.photoAsked && !leadData.photos && 
+     /don'?t have|can'?t (take|send|provide)|no photos?|skip|without|not able/i.test(txt)){
+    leadData.photosSkipped = true;
+    syncProgress();
+  }
+  
+  // Detect custom time request
+  const isCustomTimeRequest = stage === 4 && !leadData.time && 
+    (/none of (these|those)|different time|later|next week|other time|doesn't work|don't work/i.test(txt) ||
+     /monday|tuesday|wednesday|thursday|friday|saturday|sunday/i.test(txt) ||
+     /\d{1,2}(am|pm|:\d{2})/i.test(txt));
+  
+  if(isCustomTimeRequest){
+    document.getElementById('slotsBlock')?.remove();
+  }
+
+  // ============================================
+  // AI CONVERSATION - For conversation only
+  // NO stage progression from AI text
+  // ============================================
+  
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:600,
+        system:SYS.replace('{STAGE}',stage),
+        messages:hist
+      })
+    });
+    const data=await res.json();
+    removeTyping();
+    const reply=data.content?.[0]?.text||"I'm having trouble connecting. Call us at **(555) 789-1234** — we'll get you booked right away!";
+    hist.push({role:'assistant',content:reply});
+    addMsg('bot',reply);
+
+    // ============================================
+    // UI TRIGGERS - Show elements, set workflow flags
+    // NO stage progression here
+    // ============================================
+    
+    // Show photo upload if AI asks for it
+    const aiAskedForPhoto = /photo|picture|image|send.*pic/i.test(reply);
+    if(aiAskedForPhoto && !leadData.photoAsked && !leadData.photos){
+      setTimeout(showPhotoUpload, 600);
+    }
+    
+    // ADDRESS REQUESTED: Set flag when AI asks for address
+    const aiAskedForAddress = /address|where.*pick|location|service address/i.test(reply);
+    if(aiAskedForAddress && !leadData.addressAsked && !leadData.address){
+      leadData.addressAsked = true;
+      syncProgress();
+    }
+    
+    // Show time slots when ready (STRICT GATING: photos complete AND address captured)
+    if (readyForSlots(leadData) && !document.getElementById('slotsBlock') && !leadData.slotsShown) {
+      setTimeout(showTimeSlots, 600);
+    }
+    
+    // If AI confirmed custom time, extract and store it
+    if(/scheduled|booked|got you (down )?for/i.test(reply) && stage === 4 && !leadData.time){
+      const timeMatch = reply.match(/scheduled for ([^.!]+)|booked for ([^.!]+)|got you (?:down )?for ([^.!]+)/i);
+      if(timeMatch){
+        leadData.time = (timeMatch[1] || timeMatch[2] || timeMatch[3]).trim();
+        syncProgress();
+        document.getElementById('slotsBlock')?.remove();
+        setTimeout(showBookingForm, 600);
+      }
+    }
+    
+  }catch{
+    removeTyping();
+    addMsg('bot',"I'm having trouble connecting. Call **(555) 789-1234** and we'll take care of you!");
+  }
+}
+
+setTimeout(()=>{
+  const t=document.getElementById('toast');
+  if(t)t.style.display='none';
+},8000);
+</script>
+</body>
+</html>
