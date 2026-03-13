@@ -1364,19 +1364,18 @@ async function doSend(txt){
   // ============================================
   
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:600,
-        system:SYS.replace('{STAGE}',stage),
-        messages:hist
-      })
+  messages:hist,
+  system:SYS.replace('{STAGE}',stage),
+  stage:stage
+})
     });
     const data=await res.json();
     removeTyping();
-    const reply=data.content?.[0]?.text||"I'm having trouble connecting. Call us at **(555) 789-1234** — we'll get you booked right away!";
+    const reply=data.text||"I'm having trouble connecting. Call us at **(555) 789-1234** -- we'll get you booked right away!";
     hist.push({role:'assistant',content:reply});
     addMsg('bot',reply);
 
