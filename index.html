@@ -1235,19 +1235,14 @@ async function sendEmailNotification(leadData) {
     // Prepare email data
     const emailData = {
       to_email: CLIENT_CONFIG.businessEmail,
-      business_name: CLIENT_CONFIG.businessName,
-      customer_name: leadData.name,
-      customer_phone: leadData.phone,
-      customer_email: leadData.email || 'Not provided',
-      customer_address: leadData.address || 'Not provided',
-      time_slot: leadData.time,
-      special_instructions: leadData.notes || 'None',  // NEW: Include notes
-      items_described: leadData.itemsDescribed ? 'Yes' : 'No',
-      photos_uploaded: leadData.photos ? `${leadData.photos} photo(s)` : 'No photos',
-      booking_date: new Date().toLocaleString('en-US', { 
-        dateStyle: 'medium', 
-        timeStyle: 'short' 
-      })
+      owner_email: CLIENT_CONFIG.businessEmail,
+      name: leadData.name,
+      phone: leadData.phone,
+      email: leadData.email || 'Not provided',
+      address: leadData.address || 'Not provided',
+      time: leadData.time,
+      photos: leadData.photos ? `${leadData.photos} photo(s)` : 'No photos',
+      instructions: leadData.notes || 'None'
     };
     
     // Send via EmailJS
