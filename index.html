@@ -671,8 +671,9 @@ const CLIENT_CONFIG = {
   // EmailJS Configuration (get these from emailjs.com dashboard)
   emailjs: {
     serviceId: 'service_0dpmcl8',
-    templateId: 'template_5g2l81p',
-    publicKey: 'fpYy-8xFfYWuAvBIG'
+ownerTemplateId: 'template_5g2l81p',      // Business owner notification
+customerTemplateId: 'template_i692f66',    // Customer confirmation
+publicKey: 'fpYy-8xFfYWuAvBIG'
   },
   
   // Google Sheets Configuration (CONFIGURED)
@@ -1263,12 +1264,31 @@ async function sendEmailNotification(leadData) {
       instructions: leadData.notes || 'None'
     };
     
-    // Send via EmailJS
-    await emailjs.send(
-      CLIENT_CONFIG.emailjs.serviceId,
-      CLIENT_CONFIG.emailjs.templateId,
-      emailData
-    );
+    // Send email to business owner
+await emailjs.send(
+  CLIENT_CONFIG.emailjs.serviceId,
+  CLIENT_CONFIG.emailjs.ownerTemplateId,
+  emailData
+);
+
+// Send confirmation email to customer
+const customerEmailData = {
+  customer_email: leadData.email,
+  business_name: CLIENT_CONFIG.businessName,
+  business_email: CLIENT_CONFIG.businessEmail,
+  business_phone: CLIENT_CONFIG.businessPhone,
+  name: leadData.name,
+  phone: leadData.phone,
+  address: leadData.address,
+  time: leadData.time,
+  instructions: leadData.notes || 'None'
+};
+
+await emailjs.send(
+  CLIENT_CONFIG.emailjs.serviceId,
+  CLIENT_CONFIG.emailjs.customerTemplateId,
+  customerEmailData
+);
     
     console.log('✅ Email notification sent successfully');
   } catch (error) {
