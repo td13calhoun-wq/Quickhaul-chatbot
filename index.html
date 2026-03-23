@@ -1295,7 +1295,7 @@ await emailjs.send(
     console.error('❌ Email notification failed:', error);
   }
 }
-
+}
 async function logToGoogleSheets(leadData) {
   // Check if Google Sheets webhook is configured
   if (!CLIENT_CONFIG.sheetsWebhook || CLIENT_CONFIG.sheetsWebhook === 'YOUR_GOOGLE_SHEETS_WEBHOOK_URL') {
