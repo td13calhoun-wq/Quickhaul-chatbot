@@ -672,7 +672,7 @@ const CLIENT_CONFIG = {
   emailjs: {
     serviceId: 'service_0dpmcl8',
 ownerTemplateId: 'template_5g2l81p',      // Business owner notification
-customerTemplateId: 'template_i692f66',    // Customer confirmation
+customerTemplateId: 'template_x3vk8v5',    // Customer confirmation
 publicKey: 'fpYy-8xFfYWuAvBIG'
   },
   
@@ -773,8 +773,9 @@ const SYS=`You are a friendly, efficient lead qualification assistant for QuickH
 
 STEP 1: WHAT needs removed (be specific — furniture, appliances, construction debris, full house cleanout?)
 
-STEP 2: ASK FOR PHOTOS (optional) — Say: "Quick favor — can you send a photo? It helps me give you an accurate quote." 
-- If they say they don't have photos or can't provide them: "No worries, we can work without it!"
+STEP 2: ASK FOR PHOTOS (optional) — Say: "Quick favor — can you send a photo? It helps our team give you an accurate quote." 
+- If they upload photos: "Perfect, got your photos!"
+- If they say they don't have photos or can't provide them: "No worries, we can work without them!"
 - WAIT for their response about photos before asking for address
 - Don't ask for address in the same message as photos
 
@@ -986,15 +987,15 @@ async function handlePhotos(e){
   scroll1();
   setTimeout(()=>{
     addMsg('user',`Uploaded ${files.length} photo${files.length>1?'s':''}`);
+    
+    // STATE UPDATE: Photos uploaded
+    leadData.photos=files.length;
+    leadData.photosSkipped=false;
+    leadData.photoUrls=uploadedUrls; // Store URLs
+    syncProgress();
+    
+    doSend(`[SYSTEM: User uploaded photos, now ask for service address]`);
   },400);
-  
-  // STATE UPDATE: Photos uploaded
-  leadData.photos=files.length;
-  leadData.photosSkipped=false;
-  leadData.photoUrls=uploadedUrls; // Store URLs
-  syncProgress();
-  
-  doSend(`[SYSTEM: User uploaded photos, now ask for service address]`);
 }
 
 function showTimeSlots(){
