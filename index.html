@@ -832,6 +832,13 @@ BUSINESS HOURS for custom times:
 - Weekdays: 9-11am, 2-4pm, 4-6pm
 - Weekends: 10am-12pm, 1-3pm
 
+IMPORTANT for custom times: These are WINDOWS, not start times. Any time that falls within a window is valid. For example:
+- 10am is valid because it falls within the 9-11am window
+- 3pm is valid because it falls within the 2-4pm window
+- 5pm is valid because it falls within the 4-6pm window
+- 11am on weekends is valid because it falls within the 10am-12pm window
+If a customer requests a time that falls within any window, confirm it immediately. Only decline times that fall completely outside all windows.
+
 STEP 5: COLLECT NAME, PHONE & EMAIL — Say: "Perfect! To lock in your booking, I need your name and phone number. (Email too if you'd like a confirmation sent.)"
 
 NOTE ON PHOTOS: Customers can attach photos anytime using the paperclip icon — if they mention uploading photos, acknowledge them warmly ("Great, those will help our team!") and keep moving forward. Never ask them to upload photos or wait for them.
@@ -1484,7 +1491,7 @@ async function doSend(txt){
     }
     
     // If AI confirmed custom time, extract and store it
-    if(/scheduled|booked|got you (down )?for/i.test(reply) && stage === 4 && !leadData.time){
+    if(/scheduled|booked|got you (down )?for/i.test(reply) && stage === 3 && !leadData.time){
       const timeMatch = reply.match(/scheduled for ([^.!]+)|booked for ([^.!]+)|got you (?:down )?for ([^.!]+)/i);
       if(timeMatch){
         leadData.time = (timeMatch[1] || timeMatch[2] || timeMatch[3]).trim();
