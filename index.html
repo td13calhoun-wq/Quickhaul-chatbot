@@ -836,7 +836,7 @@ STEP 3: PROVIDE PRICE ESTIMATE — After the address is confirmed, give ONLY the
 - Large load (7-12 items): $600-900
 - Full house cleanout: $1200-2500+
 
-Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Feel free to attach any photos using the 📎 button below — it helps our team prepare!"
+Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Do you have any photos you'd like to upload? You can attach them using the 📎 button below — it helps our team prepare!"
 
 IMPORTANT: Do NOT mention time slots, availability, or hours in this message. The system will automatically show the available times after your estimate. Your job at Step 3 is ONLY the price and photo mention.
 
@@ -1508,7 +1508,15 @@ async function doSend(txt){
     leadData.address = txt.trim();
     syncProgress();
   }
-  
+
+  // STEP 4 TRIGGER: Customer has responded after seeing the estimate — now show availability + slots
+  if(leadData.priceShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
+    setTimeout(() => {
+      addMsg('bot', "We're available:\n- **Weekdays:** 9-11am, 2-4pm, 4-6pm\n- **Weekends:** 10am-12pm, 1-3pm\n\nHere are our next available slots — which works best for you?");
+      setTimeout(showTimeSlots, 600);
+    }, 800);
+  }
+
   // Detect custom time request
   const isCustomTimeRequest = stage === 4 && !leadData.time && 
     (/none of (these|those)|different time|later|next week|other time|doesn't work|don't work/i.test(txt) ||
@@ -1552,16 +1560,11 @@ async function doSend(txt){
       setTimeout(showAddressForm, 600);
     }
 
-    // PRICE ESTIMATE GIVEN: Detect estimate, then show Step 4 message + slots
+    // PRICE ESTIMATE GIVEN: Set flag and wait for customer to respond before showing slots
     const aiGaveEstimate = /looking at around|you're looking at|\$\d+.*[-–]\s*\$?\d+/i.test(reply);
     if(aiGaveEstimate && !leadData.priceShown && hasValidAddress(leadData.address)){
       leadData.priceShown = true;
       syncProgress();
-      // After estimate lands, show the static Step 4 availability message, then slot buttons
-      setTimeout(() => {
-        addMsg('bot', "We're available:\n- **Weekdays:** 9-11am, 2-4pm, 4-6pm\n- **Weekends:** 10am-12pm, 1-3pm\n\nHere are our next available slots — which works best for you?");
-        setTimeout(showTimeSlots, 600);
-      }, 800);
     }
 
     // If AI confirmed custom time, extract and store it
