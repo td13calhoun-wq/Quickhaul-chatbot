@@ -1236,24 +1236,29 @@ await emailjs.send(
   emailData
 );
 
-// Send confirmation email to customer
-const customerEmailData = {
-  customer_email: leadData.email,
-  business_name: CLIENT_CONFIG.businessName,
-  business_email: CLIENT_CONFIG.businessEmail,
-  business_phone: CLIENT_CONFIG.businessPhone,
-  name: leadData.name,
-  phone: leadData.phone,
-  address: leadData.address,
-  time: leadData.time,
-  instructions: leadData.notes || 'None'
-};
+// Send confirmation email to customer (only if they provided an email)
+if (leadData.email) {
+  const customerEmailData = {
+    customer_email: leadData.email,
+    business_name: CLIENT_CONFIG.businessName,
+    business_email: CLIENT_CONFIG.businessEmail,
+    business_phone: CLIENT_CONFIG.businessPhone,
+    name: leadData.name,
+    phone: leadData.phone,
+    address: leadData.address,
+    time: leadData.time,
+    instructions: leadData.notes || 'None'
+  };
 
-await emailjs.send(
-  CLIENT_CONFIG.emailjs.serviceId,
-  CLIENT_CONFIG.emailjs.customerTemplateId,
-  customerEmailData
-);
+  await emailjs.send(
+    CLIENT_CONFIG.emailjs.serviceId,
+    CLIENT_CONFIG.emailjs.customerTemplateId,
+    customerEmailData
+  );
+  console.log('✅ Customer confirmation email sent to:', leadData.email);
+} else {
+  console.log('ℹ️ No customer email provided - skipping confirmation email');
+}
     
     console.log('✅ Email notification sent successfully');
   } catch (error) {
