@@ -765,10 +765,9 @@ function hasValidAddress(addr) {
   // return looksLikeAddress(addr);
 }
 
-// Check if ready to show time slots (address only — photos are optional)
+// Check if ready to show time slots (price must be shown first)
 function readyForSlots(lead) {
-  const addressDone = hasValidAddress(lead.address);
-  return addressDone && !lead.time;
+  return hasValidAddress(lead.address) && lead.priceShown && !lead.time;
 }
 
 // WORKFLOW-BASED: Compute stage from WORKFLOW FLAGS (entering stage) not just data completion
@@ -831,7 +830,7 @@ STEP 1: WHAT needs removed (be specific — furniture, appliances, construction 
 
 STEP 2: SERVICE ADDRESS — Ask: "What's the service address where we'll be picking this up?" A popup form will appear for them to fill in their full address — you do not need to ask for city or zip separately.
 
-STEP 3: PROVIDE PRICE ESTIMATE — After the address is confirmed, send ONLY the price estimate and photo mention. Keep it short:
+STEP 3: PROVIDE PRICE ESTIMATE — After the address is confirmed, give ONLY the price estimate and mention photos. Stop there.
 - Small load (1-2 items): $150-250
 - Medium load (3-6 items): $300-500  
 - Large load (7-12 items): $600-900
@@ -839,30 +838,18 @@ STEP 3: PROVIDE PRICE ESTIMATE — After the address is confirmed, send ONLY the
 
 Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Feel free to attach any photos using the 📎 button below — it helps our team prepare!"
 
-STEP 4: TIME SLOTS — In a NEW separate message after the estimate, say ONLY:
-"Here are our next available slots — which works best for you?"
+IMPORTANT: Do NOT mention time slots, availability, or hours in this message. The system will automatically show the available times after your estimate. Your job at Step 3 is ONLY the price and photo mention.
 
-Do NOT list out the available hours. Do NOT combine this with the price estimate. The system shows clickable slot buttons — just ask which works and let the buttons do the work.
-
-If customer requests a CUSTOM time instead of clicking a slot:
-- If their time is within available windows: "Perfect! I've got you scheduled for [their time]."
-- If their time is NOT available: "We don't have availability at [their time], but we have openings at [suggest closest available window]. Would that work?"
-- Once a time is confirmed, the system will advance to collect contact info.
-
-BUSINESS HOURS for custom times:
-- Weekdays: 9-11am, 2-4pm, 4-6pm
-- Weekends: 10am-12pm, 1-3pm
-
-IMPORTANT for custom times: These are WINDOWS, not start times. Any time that falls within a window is valid. For example:
-- 10am is valid because it falls within the 9-11am window
-- 3pm is valid because it falls within the 2-4pm window
-- 5pm is valid because it falls within the 4-6pm window
-- 11am on weekends is valid because it falls within the 10am-12pm window
-If a customer requests a time that falls within any window, confirm it immediately. Only decline times that fall completely outside all windows.
+STEP 4: TIME SLOTS — The system automatically shows available hours and clickable slot buttons after your estimate. If the customer types a custom time instead of clicking a button:
+- Available windows: Weekdays 9-11am, 2-4pm, 4-6pm / Weekends 10am-12pm, 1-3pm
+- These are WINDOWS not start times — 10am is valid within 9-11am, 3pm within 2-4pm, 5pm within 4-6pm
+- If their time falls within a window: "Perfect! I've got you scheduled for [their time]."
+- If outside all windows: suggest the closest available window
+- Once confirmed, move to Step 5
 
 STEP 5: COLLECT NAME, PHONE & EMAIL — Say: "Perfect! To lock in your booking, I need your name and phone number. (Email too if you'd like a confirmation sent.)"
 
-NOTE ON PHOTOS: You mention photos once at Step 3 (after the price estimate). If a customer attaches photos at any point, acknowledge them warmly ("Great, those will help our team!") and keep moving forward. Never wait for photos before continuing.
+NOTE ON PHOTOS: Mention photos once at Step 3 after the price estimate. If a customer attaches photos at any point, acknowledge them warmly and keep moving forward. Never wait for photos before continuing.
 
 IMPORTANT: Ask for ONE thing at a time. Keep responses SHORT (2-3 sentences). Be friendly but efficient. Move them toward booking quickly.
 
@@ -1555,15 +1542,7 @@ async function doSend(txt){
 
     // ============================================
     // UI TRIGGERS - Show elements, set workflow flags
-    // NO stage progression here
     // ============================================
-    
-    // PRICE ESTIMATE GIVEN: Set flag when AI gives a price range
-    const aiGaveEstimate = /looking at around|estimate.*\$|you're looking at|\$\d+.*\$\d+/i.test(reply);
-    if(aiGaveEstimate && !leadData.priceShown){
-      leadData.priceShown = true;
-      syncProgress();
-    }
 
     // ADDRESS REQUESTED: Show popup form and set flag
     const aiAskedForAddress = /address|where.*pick|location|service address/i.test(reply);
@@ -1572,19 +1551,21 @@ async function doSend(txt){
       syncProgress();
       setTimeout(showAddressForm, 600);
     }
-    
-    // Show time slots when ready - send follow-up message first, then show slots below it
-    if (readyForSlots(leadData) && !document.getElementById('slotsBlock') && !leadData.slotsShown) {
+
+    // PRICE ESTIMATE GIVEN: Detect estimate, then show Step 4 message + slots
+    const aiGaveEstimate = /looking at around|you're looking at|\$\d+.*[-–]\s*\$?\d+/i.test(reply);
+    if(aiGaveEstimate && !leadData.priceShown && hasValidAddress(leadData.address)){
+      leadData.priceShown = true;
+      syncProgress();
+      // After estimate lands, show the static Step 4 availability message, then slot buttons
       setTimeout(() => {
-        // Send the follow-up message first
-        doSend('[SYSTEM: Price estimate was just given. Send ONE short sentence asking which time slot works best. Do not list hours or repeat the estimate.]');
-        // Then show the slot buttons after the message lands
-        setTimeout(showTimeSlots, 1200);
-      }, 600);
+        addMsg('bot', "We're available:\n- **Weekdays:** 9-11am, 2-4pm, 4-6pm\n- **Weekends:** 10am-12pm, 1-3pm\n\nHere are our next available slots — which works best for you?");
+        setTimeout(showTimeSlots, 600);
+      }, 800);
     }
-    
+
     // If AI confirmed custom time, extract and store it
-    if(/scheduled|booked|got you (down )?for/i.test(reply) && stage === 3 && !leadData.time){
+    if(/scheduled|booked|got you (down )?for/i.test(reply) && !leadData.time){
       const timeMatch = reply.match(/scheduled for ([^.!]+)|booked for ([^.!]+)|got you (?:down )?for ([^.!]+)/i);
       if(timeMatch){
         leadData.time = (timeMatch[1] || timeMatch[2] || timeMatch[3]).trim();
