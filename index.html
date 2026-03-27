@@ -660,7 +660,7 @@ body{
     <div class="progress-bar">
       <div class="progress-fill" id="progressFill" style="width:20%"></div>
     </div>
-    <div class="progress-text" id="progressText">Step 1 of 4 — Tell us what you need removed</div>
+    <div class="progress-text" id="progressText">Step 1 of 5 — Tell us what you need removed</div>
   </div>
 
   <!-- Category slider with arrows -->
@@ -773,14 +773,17 @@ function readyForSlots(lead) {
 
 // WORKFLOW-BASED: Compute stage from WORKFLOW FLAGS (entering stage) not just data completion
 function computeStageFromLead(lead) {
-  // Step 5 – Booking confirmed
-  if (lead.booked) return 5;
+  // Step 6 – Booking confirmed
+  if (lead.booked) return 6;
   
-  // Step 4 – Contact stage (form shown)
-  if (lead.contactFormShown) return 4;
+  // Step 5 – Contact stage (form shown)
+  if (lead.contactFormShown) return 5;
   
-  // Step 3 – Time selected or slots shown
-  if (lead.slotsShown || lead.time) return 3;
+  // Step 4 – Time selected or slots shown
+  if (lead.slotsShown || lead.time) return 4;
+  
+  // Step 3 – Price estimate given
+  if (lead.priceShown) return 3;
   
   // Step 2 – Address stage
   if (lead.addressAsked || hasValidAddress(lead.address)) return 2;
@@ -788,7 +791,7 @@ function computeStageFromLead(lead) {
   // Step 1 – Items described
   if (lead.itemsDescribed) return 1;
   
-  return 1; // Default
+  return 1;
 }
 
 // Sync progress bar to match leadData state
@@ -816,9 +819,10 @@ let leadData={
   // Workflow flags
   photoAsked: false,
   addressAsked: false,
+  priceShown: false,
   slotsShown: false,
   contactFormShown: false,
-  booked: false  // NEW: Booking confirmed
+  booked: false
 };
 
 const SYS=`You are a friendly, efficient lead qualification assistant for QuickHaul Junk Removal. Your job is to book estimates by collecting information in this order, ONE STEP AT A TIME:
@@ -827,25 +831,20 @@ STEP 1: WHAT needs removed (be specific — furniture, appliances, construction 
 
 STEP 2: SERVICE ADDRESS — Ask: "What's the service address where we'll be picking this up?" A popup form will appear for them to fill in their full address — you do not need to ask for city or zip separately.
 
-STEP 3: PROVIDE PRICE ESTIMATE based on volume:
+STEP 3: PROVIDE PRICE ESTIMATE — After the address is confirmed, send ONLY the price estimate and photo mention. Keep it short:
 - Small load (1-2 items): $150-250
 - Medium load (3-6 items): $300-500  
 - Large load (7-12 items): $600-900
 - Full house cleanout: $1200-2500+
 
-Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Also, feel free to attach any photos using the 📎 button below — it helps our team prepare for the job!"
+Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Feel free to attach any photos using the 📎 button below — it helps our team prepare!"
 
-STEP 4: TIME SLOTS — Immediately after the price estimate, say:
+STEP 4: TIME SLOTS — In a NEW separate message after the estimate, say ONLY:
+"Here are our next available slots — which works best for you?"
 
-"We're available:
-- Weekdays: 9-11am, 2-4pm, 4-6pm
-- Weekends: 10am-12pm, 1-3pm
+Do NOT list out the available hours. Do NOT combine this with the price estimate. The system shows clickable slot buttons — just ask which works and let the buttons do the work.
 
-Here are our next available slots — which works best for you?"
-
-The system will show clickable time slot buttons below. DO NOT list specific dates (like "Tomorrow 2pm" or "Friday 4pm") in your message. Just show the general hours above, then let the buttons show actual available slots.
-
-If customer requests a CUSTOM time:
+If customer requests a CUSTOM time instead of clicking a slot:
 - If their time is within available windows: "Perfect! I've got you scheduled for [their time]."
 - If their time is NOT available: "We don't have availability at [their time], but we have openings at [suggest closest available window]. Would that work?"
 - Once a time is confirmed, the system will advance to collect contact info.
@@ -874,7 +873,7 @@ If they ask common questions, answer BRIEFLY then return to the current step:
 
 Never negotiate specific pricing. Stay professional and positive.
 
-Current stage: Step {STAGE} of 4`;
+Current stage: Step {STAGE} of 5`;
 
 function scrollQuick(amount){
   const bar=document.getElementById('quickBar');
@@ -887,26 +886,26 @@ function hideCategories(){
 }
 
 function updateProgress(step){
-  // Guard: only advance if the workflow flag that drives this step is set
   if(step===2 && !leadData.itemsDescribed) return;
   if(step===3 && !leadData.addressAsked && !hasValidAddress(leadData.address)) return;
-  if(step===4 && !leadData.slotsShown && !leadData.time) return;
-  if(step===5 && !leadData.booked) return;
-  
+  if(step===4 && !leadData.priceShown) return;
+  if(step===5 && !leadData.slotsShown && !leadData.time) return;
+  if(step===6 && !leadData.booked) return;
+
   stage=step;
-  const pct=[0,25,50,75,90,100][step];
+  const pct=[0,20,40,60,80,90,100][step];
   const labels=[
     '',
-    'Step 1 of 4 — Tell us what you need removed',
-    'Step 2 of 4 — Confirm your location',
-    'Step 3 of 4 — Choose your pickup time',
+    'Step 1 of 5 — Tell us what you need removed',
+    'Step 2 of 5 — Confirm your location',
+    'Step 3 of 5 — Your price estimate',
+    'Step 4 of 5 — Choose your pickup time',
     'Final Step — Enter your contact info',
     '✓ Booking Confirmed'
   ];
   document.getElementById('progressFill').style.width=pct+'%';
   document.getElementById('progressText').textContent=labels[step];
-  
-  // Hide categories once we move past step 1
+
   if(step>=2){
     hideCategories();
   }
@@ -1559,6 +1558,13 @@ async function doSend(txt){
     // NO stage progression here
     // ============================================
     
+    // PRICE ESTIMATE GIVEN: Set flag when AI gives a price range
+    const aiGaveEstimate = /looking at around|estimate.*\$|you're looking at|\$\d+.*\$\d+/i.test(reply);
+    if(aiGaveEstimate && !leadData.priceShown){
+      leadData.priceShown = true;
+      syncProgress();
+    }
+
     // ADDRESS REQUESTED: Show popup form and set flag
     const aiAskedForAddress = /address|where.*pick|location|service address/i.test(reply);
     if(aiAskedForAddress && !leadData.addressAsked && !leadData.address){
@@ -1567,9 +1573,14 @@ async function doSend(txt){
       setTimeout(showAddressForm, 600);
     }
     
-    // Show time slots when ready (STRICT GATING: photos complete AND address captured)
+    // Show time slots when ready - send follow-up message first, then show slots below it
     if (readyForSlots(leadData) && !document.getElementById('slotsBlock') && !leadData.slotsShown) {
-      setTimeout(showTimeSlots, 600);
+      setTimeout(() => {
+        // Send the follow-up message first
+        doSend('[SYSTEM: Price estimate was just given. Send ONE short sentence asking which time slot works best. Do not list hours or repeat the estimate.]');
+        // Then show the slot buttons after the message lands
+        setTimeout(showTimeSlots, 1200);
+      }, 600);
     }
     
     // If AI confirmed custom time, extract and store it
