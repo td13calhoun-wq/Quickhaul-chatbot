@@ -1511,8 +1511,10 @@ async function doSend(txt){
 
   // STEP 4 TRIGGER: Customer has responded after seeing the estimate — now show availability + slots
   if(leadData.priceShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
+    leadData.priceShown = true; // Guarantee it's set even if regex missed it
+    syncProgress();
     setTimeout(() => {
-      addMsg('bot', "We're available:\n- **Weekdays:** 9-11am, 2-4pm, 4-6pm\n- **Weekends:** 10am-12pm, 1-3pm\n\nHere are our next available slots — which works best for you?");
+      addMsg('bot', "Here are our available time slots:\n\n📅 **Weekdays:** 9-11am · 2-4pm · 4-6pm\n🗓 **Weekends:** 10am-12pm · 1-3pm\n\nWhich of these works best for you?");
       setTimeout(showTimeSlots, 600);
     }, 800);
   }
@@ -1560,8 +1562,8 @@ async function doSend(txt){
       setTimeout(showAddressForm, 600);
     }
 
-    // PRICE ESTIMATE GIVEN: Set flag and wait for customer to respond before showing slots
-    const aiGaveEstimate = /looking at around|you're looking at|\$\d+.*[-–]\s*\$?\d+/i.test(reply);
+    // PRICE ESTIMATE GIVEN: Detect estimate and set priceShown flag
+    const aiGaveEstimate = /looking at around|you're looking at|\$\d+|\bquote\b.*\$|estimate.*\$|\$.*estimate/i.test(reply);
     if(aiGaveEstimate && !leadData.priceShown && hasValidAddress(leadData.address)){
       leadData.priceShown = true;
       syncProgress();
