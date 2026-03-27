@@ -389,7 +389,28 @@ body{
   letter-spacing:0.3px;
 }
 
-/* Booking form */
+/* Address popup form */
+.address-form{
+  background:transparent;
+  border-radius:14px;padding:0;margin-left:42px;
+  animation:mIn 0.3s ease both;
+}
+.address-card{
+  background:#ffffff;
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.06);
+}
+.address-card .bf-title{
+  margin-bottom:14px;
+}
+.address-row{
+  display:flex;gap:10px;
+}
+.address-row .form-group{
+  flex:1;
+}
+
 /* Booking form */
 .book-form{
   background:transparent;
@@ -724,16 +745,17 @@ publicKey: 'fpYy-8xFfYWuAvBIG'
 // Workflow-based: Progress when ENTERING stage, not completing
 // ============================================
 
-// Check if string looks like a valid address
+// Check if string looks like a valid full address (requires zip code)
 function looksLikeAddress(s) {
   if (!s || s.length < 8) return false;
   const lower = s.toLowerCase();
   
-  // Must have a number AND a street type
+  // Must have a number AND a street type AND a 5-digit zip code
   const hasNumber = /\d+/.test(lower);
   const hasStreetType = /(st|street|ave|avenue|rd|road|dr|drive|ln|lane|blvd|boulevard|ct|court|way|place|pl|circle|cir|parkway|pkwy)/.test(lower);
+  const hasZip = /\b\d{5}\b/.test(lower);
   
-  return hasNumber && hasStreetType;
+  return hasNumber && hasStreetType && hasZip;
 }
 
 // Check if we have a valid captured address
@@ -803,7 +825,7 @@ const SYS=`You are a friendly, efficient lead qualification assistant for QuickH
 
 STEP 1: WHAT needs removed (be specific — furniture, appliances, construction debris, full house cleanout?)
 
-STEP 2: SERVICE ADDRESS — Ask: "What's the service address where we'll be picking this up?"
+STEP 2: SERVICE ADDRESS — Ask: "What's the service address where we'll be picking this up?" A popup form will appear for them to fill in their full address — you do not need to ask for city or zip separately.
 
 STEP 3: PROVIDE PRICE ESTIMATE based on volume:
 - Small load (1-2 items): $150-250
@@ -811,7 +833,7 @@ STEP 3: PROVIDE PRICE ESTIMATE based on volume:
 - Large load (7-12 items): $600-900
 - Full house cleanout: $1200-2500+
 
-Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out."
+Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Also, feel free to attach any photos using the 📎 button below — it helps our team prepare for the job!"
 
 STEP 4: TIME SLOTS — Immediately after the price estimate, say:
 
@@ -841,7 +863,7 @@ If a customer requests a time that falls within any window, confirm it immediate
 
 STEP 5: COLLECT NAME, PHONE & EMAIL — Say: "Perfect! To lock in your booking, I need your name and phone number. (Email too if you'd like a confirmation sent.)"
 
-NOTE ON PHOTOS: Customers can attach photos anytime using the paperclip icon — if they mention uploading photos, acknowledge them warmly ("Great, those will help our team!") and keep moving forward. Never ask them to upload photos or wait for them.
+NOTE ON PHOTOS: You mention photos once at Step 3 (after the price estimate). If a customer attaches photos at any point, acknowledge them warmly ("Great, those will help our team!") and keep moving forward. Never wait for photos before continuing.
 
 IMPORTANT: Ask for ONE thing at a time. Keep responses SHORT (2-3 sentences). Be friendly but efficient. Move them toward booking quickly.
 
@@ -960,6 +982,60 @@ function showTyping(){
 function removeTyping(){
   const el=document.getElementById('typRow');
   if(el)el.remove();
+}
+
+function showAddressForm(){
+  if(document.getElementById('addressBlock')) return; // Don't show twice
+  const wrap=document.getElementById('msgs');
+  const form=document.createElement('div');
+  form.className='address-form';
+  form.id='addressBlock';
+  form.innerHTML=`
+    <div class="address-card">
+      <div class="bf-title">📍 Enter your pickup address</div>
+      <div class="form-group">
+        <label class="field-label">Street Address</label>
+        <input class="bf-input" id="afStreet" placeholder="1234 Main Street" type="text"/>
+      </div>
+      <div class="address-row">
+        <div class="form-group">
+          <label class="field-label">City</label>
+          <input class="bf-input" id="afCity" placeholder="Cypress" type="text"/>
+        </div>
+        <div class="form-group">
+          <label class="field-label">Zip Code</label>
+          <input class="bf-input" id="afZip" placeholder="77095" type="text" maxlength="5"/>
+        </div>
+      </div>
+      <button class="bf-submit" onclick="submitAddress()">Confirm Address →</button>
+    </div>`;
+  wrap.appendChild(form);
+  scroll();
+}
+
+function submitAddress(){
+  const street = document.getElementById('afStreet')?.value.trim();
+  const city   = document.getElementById('afCity')?.value.trim();
+  const zip    = document.getElementById('afZip')?.value.trim();
+
+  if(!street || !city || !zip){
+    alert('Please fill in your street address, city, and zip code.');
+    return;
+  }
+  if(!/^\d{5}$/.test(zip)){
+    alert('Please enter a valid 5-digit zip code.');
+    return;
+  }
+
+  const fullAddress = `${street}, ${city}, ${zip}`;
+  document.getElementById('addressBlock')?.remove();
+  addMsg('user', fullAddress);
+
+  // Store the confirmed full address
+  leadData.address = fullAddress;
+  syncProgress();
+
+  doSend(`[SYSTEM: Customer confirmed their pickup address as: ${fullAddress}. Give a price estimate then show time slots.]`);
 }
 
 function showTimeSlots(){
@@ -1483,11 +1559,12 @@ async function doSend(txt){
     // NO stage progression here
     // ============================================
     
-    // ADDRESS REQUESTED: Set flag when AI asks for address
+    // ADDRESS REQUESTED: Show popup form and set flag
     const aiAskedForAddress = /address|where.*pick|location|service address/i.test(reply);
     if(aiAskedForAddress && !leadData.addressAsked && !leadData.address){
       leadData.addressAsked = true;
       syncProgress();
+      setTimeout(showAddressForm, 600);
     }
     
     // Show time slots when ready (STRICT GATING: photos complete AND address captured)
