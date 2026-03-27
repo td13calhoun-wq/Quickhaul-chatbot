@@ -851,7 +851,7 @@ STEP 5: COLLECT NAME, PHONE & EMAIL — Say: "Perfect! To lock in your booking, 
 
 NOTE ON PHOTOS: Mention photos once at Step 3 after the price estimate. If a customer attaches photos at any point, acknowledge them warmly and keep moving forward. Never wait for photos before continuing.
 
-IMPORTANT: Ask for ONE thing at a time. Keep responses SHORT (2-3 sentences). Be friendly but efficient. Move them toward booking quickly.
+IMPORTANT: Ask for ONE thing at a time. Keep responses SHORT (2-3 sentences). Be friendly but efficient. Move them toward booking quickly. NEVER output [SYSTEM:...] tags in your replies — those are internal instructions only.
 
 If they ask common questions, answer BRIEFLY then return to the current step:
 - "Do you take mattresses?" → "Yes, we take mattresses." (then return to current question)
@@ -1478,6 +1478,16 @@ async function handleClipPhotos(e) {
     const reply = data.text || "Got your photos — thanks! Those will be really helpful.";
     hist.push({ role: 'assistant', content: reply });
     addMsg('bot', reply);
+
+    // STEP 4 TRIGGER: If price was already shown, fire availability + slots after photo acknowledgment
+    if(leadData.priceShown && !leadData.slotsShown && !leadData.time){
+      leadData.priceShown = true;
+      syncProgress();
+      setTimeout(() => {
+        addMsg('bot', "Here are our available time slots:\n\n📅 **Weekdays:** 9-11am · 2-4pm · 4-6pm\n🗓 **Weekends:** 10am-12pm · 1-3pm\n\nWhich of these works best for you?");
+        setTimeout(showTimeSlots, 600);
+      }, 800);
+    }
   } catch {
     removeTyping();
     addMsg('bot', "Got your photos — thanks! Those will help our team give you the most accurate quote.");
@@ -1507,16 +1517,6 @@ async function doSend(txt){
   if(!leadData.address && looksLikeAddress(txt)){
     leadData.address = txt.trim();
     syncProgress();
-  }
-
-  // STEP 4 TRIGGER: Customer has responded after seeing the estimate — now show availability + slots
-  if(leadData.priceShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
-    leadData.priceShown = true; // Guarantee it's set even if regex missed it
-    syncProgress();
-    setTimeout(() => {
-      addMsg('bot', "Here are our available time slots:\n\n📅 **Weekdays:** 9-11am · 2-4pm · 4-6pm\n🗓 **Weekends:** 10am-12pm · 1-3pm\n\nWhich of these works best for you?");
-      setTimeout(showTimeSlots, 600);
-    }, 800);
   }
 
   // Detect custom time request
@@ -1567,6 +1567,16 @@ async function doSend(txt){
     if(aiGaveEstimate && !leadData.priceShown && hasValidAddress(leadData.address)){
       leadData.priceShown = true;
       syncProgress();
+    }
+
+    // STEP 4 TRIGGER: After AI responds to customer's Step 3 reply, show availability + slots
+    if(leadData.priceShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
+      leadData.priceShown = true;
+      syncProgress();
+      setTimeout(() => {
+        addMsg('bot', "Here are our available time slots:\n\n📅 **Weekdays:** 9-11am · 2-4pm · 4-6pm\n🗓 **Weekends:** 10am-12pm · 1-3pm\n\nWhich of these works best for you?");
+        setTimeout(showTimeSlots, 600);
+      }, 800);
     }
 
     // If AI confirmed custom time, extract and store it
