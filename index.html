@@ -1435,22 +1435,22 @@ async function uploadPhotoToImgBB(file) {
 
 // Handle optional paperclip photo attachments (non-blocking)
 async function handleClipPhotos(e) {
-  const files = e.target.files;
-  if (!files.length) return;
+  // Convert to array FIRST before resetting the input (FileList is a live object)
+  const filesToUpload = Array.from(e.target.files).slice(0, 5);
+  if (!filesToUpload.length) return;
   
   // Reset input so same files can be re-selected if needed
   e.target.value = '';
-  
+
   const wrap = document.getElementById('msgs');
-  
+
   // Show thumbnails immediately (local preview)
   const preview = document.createElement('div');
   preview.className = 'clip-preview';
   const uploadingNote = document.createElement('div');
   uploadingNote.className = 'clip-uploading';
   uploadingNote.textContent = 'Uploading photos…';
-  
-  const filesToUpload = Array.from(files).slice(0, 5);
+
   filesToUpload.forEach(file => {
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
