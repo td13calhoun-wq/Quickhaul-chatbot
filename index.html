@@ -819,6 +819,7 @@ let leadData={
   photoAsked: false,
   addressAsked: false,
   priceShown: false,
+  slotsMessageShown: false,
   slotsShown: false,
   contactFormShown: false,
   booked: false
@@ -849,7 +850,7 @@ STEP 4: TIME SLOTS — The system automatically shows available hours and clicka
 
 STEP 5: COLLECT NAME, PHONE & EMAIL — Say: "Perfect! To lock in your booking, I need your name and phone number. (Email too if you'd like a confirmation sent.)"
 
-NOTE ON PHOTOS: Mention photos once at Step 3 after the price estimate. If a customer attaches photos at any point, acknowledge them warmly and keep moving forward. Never wait for photos before continuing.
+NOTE ON PHOTOS: If a customer attaches photos, acknowledge them in ONE short sentence only — e.g. "Perfect, got your photos — those will help our team!" Do NOT mention time slots, availability, or hours. The system handles that automatically after your response.
 
 IMPORTANT: Ask for ONE thing at a time. Keep responses SHORT (2-3 sentences). Be friendly but efficient. Move them toward booking quickly. NEVER output [SYSTEM:...] tags in your replies — those are internal instructions only.
 
@@ -1461,36 +1462,18 @@ async function handleClipPhotos(e) {
   leadData.photos = (leadData.photos || 0) + filesToUpload.length;
   if (!leadData.photoUrls) leadData.photoUrls = [];
   leadData.photoUrls.push(...uploadedUrls);
-  
-  // Send a quiet user message so the AI acknowledges the photos
-  addMsg('user', `Attached ${filesToUpload.length} photo${filesToUpload.length > 1 ? 's' : ''} 📎`);
-  hist.push({ role: 'user', content: `[User attached ${filesToUpload.length} photo(s) to help the team. Acknowledge briefly and continue the booking flow.]` });
-  showTyping();
-  
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: hist, system: SYS.replace('{STAGE}', stage), stage: stage })
-    });
-    const data = await res.json();
-    removeTyping();
-    const reply = data.text || "Got your photos — thanks! Those will be really helpful.";
-    hist.push({ role: 'assistant', content: reply });
-    addMsg('bot', reply);
 
-    // STEP 4 TRIGGER: If price was already shown, fire availability + slots after photo acknowledgment
-    if(leadData.priceShown && !leadData.slotsShown && !leadData.time){
-      leadData.priceShown = true;
-      syncProgress();
-      setTimeout(() => {
-        addMsg('bot', "Here are our available time slots:\n\n📅 **Weekdays:** 9-11am · 2-4pm · 4-6pm\n🗓 **Weekends:** 10am-12pm · 1-3pm\n\nWhich of these works best for you?");
-        setTimeout(showTimeSlots, 600);
-      }, 800);
-    }
-  } catch {
-    removeTyping();
-    addMsg('bot', "Got your photos — thanks! Those will help our team give you the most accurate quote.");
+  // Add to history so AI knows photos were uploaded
+  addMsg('user', `Attached ${filesToUpload.length} photo${filesToUpload.length > 1 ? 's' : ''} 📎`);
+  hist.push({ role: 'user', content: `[User uploaded ${filesToUpload.length} photo(s)]` });
+  hist.push({ role: 'assistant', content: `Got your photo${filesToUpload.length > 1 ? 's' : ''} — thanks! Those will help our team come prepared. Our available windows are:\n\nWeekdays: 9-11am, 2-4pm, 4-6pm\nWeekends: 10am-12pm, 1-3pm\n\nWhich time works best for you?` });
+
+  // Show the combined message and slot buttons
+  if(leadData.priceShown && !leadData.slotsMessageShown){
+    leadData.slotsMessageShown = true;
+    syncProgress();
+    addMsg('bot', `Got your photo${filesToUpload.length > 1 ? 's' : ''} — thanks! Those will help our team come prepared.\n\nOur available windows are:\n\nWeekdays: 9-11am, 2-4pm, 4-6pm\nWeekends: 10am-12pm, 1-3pm\n\nWhich time works best for you?`);
+    setTimeout(showTimeSlots, 600);
   }
 }
 
@@ -1548,7 +1531,12 @@ async function doSend(txt){
     removeTyping();
     const reply=data.text||"I'm having trouble connecting. Call us at **(555) 789-1234** -- we'll get you booked right away!";
     hist.push({role:'assistant',content:reply});
-    addMsg('bot',reply);
+
+    // If Step 4 is about to fire, suppress the AI reply so only the static message shows
+    const step4AboutToFire = leadData.priceShown && !leadData.slotsMessageShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM');
+    if(!step4AboutToFire){
+      addMsg('bot',reply);
+    }
 
     // ============================================
     // UI TRIGGERS - Show elements, set workflow flags
@@ -1569,12 +1557,12 @@ async function doSend(txt){
       syncProgress();
     }
 
-    // STEP 4 TRIGGER: After AI responds to customer's Step 3 reply, show availability + slots
-    if(leadData.priceShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
-      leadData.priceShown = true;
+    // STEP 4 TRIGGER: Customer skipped photos and typed a reply — show combined message + slots
+    if(leadData.priceShown && !leadData.slotsMessageShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
+      leadData.slotsMessageShown = true;
       syncProgress();
       setTimeout(() => {
-        addMsg('bot', "Here are our available time slots:\n\n📅 **Weekdays:** 9-11am · 2-4pm · 4-6pm\n🗓 **Weekends:** 10am-12pm · 1-3pm\n\nWhich of these works best for you?");
+        addMsg('bot', "No problem! Our available windows are:\n\nWeekdays: 9-11am, 2-4pm, 4-6pm\nWeekends: 10am-12pm, 1-3pm\n\nWhich time works best for you?");
         setTimeout(showTimeSlots, 600);
       }, 800);
     }
