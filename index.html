@@ -832,10 +832,14 @@ STEP 1: WHAT needs removed (be specific — furniture, appliances, construction 
 STEP 2: SERVICE ADDRESS — Ask: "What's the service address where we'll be picking this up?" A popup form will appear for them to fill in their full address — you do not need to ask for city or zip separately.
 
 STEP 3: PROVIDE PRICE ESTIMATE — After the address is confirmed, give ONLY the price estimate and mention photos. Stop there.
-- Small load (1-2 items): $150-250
-- Medium load (3-6 items): $300-500  
-- Large load (7-12 items): $600-900
+
+Pricing by volume AND item type:
+- Small load (1-3 small/light items like boxes, bags, small appliances): $150-250
+- Medium load (4-8 medium items like chairs, small furniture, mixed boxes): $300-500
+- Large load (bulky furniture, appliances, or 9+ items): $600-900
 - Full house cleanout: $1200-2500+
+
+Important: Boxes, bags, and light items should lean toward the LOWER end. Heavy furniture and appliances lean toward the UPPER end. 5-6 boxes of clothes/books = small load ($150-250).
 
 Say something like: "Based on what you've described, you're looking at around $X-$X. We can give you an exact quote when we come out. Do you have any photos you'd like to upload? You can attach them using the 📎 button below — it helps our team prepare!"
 
@@ -1500,6 +1504,8 @@ async function doSend(txt){
   if(!leadData.address && looksLikeAddress(txt)){
     leadData.address = txt.trim();
     syncProgress();
+    // Close the popup if it's still open
+    document.getElementById('addressBlock')?.remove();
   }
 
   // Detect custom time request
@@ -1531,12 +1537,7 @@ async function doSend(txt){
     removeTyping();
     const reply=data.text||"I'm having trouble connecting. Call us at **(555) 789-1234** -- we'll get you booked right away!";
     hist.push({role:'assistant',content:reply});
-
-    // If Step 4 is about to fire, suppress the AI reply so only the static message shows
-    const step4AboutToFire = leadData.priceShown && !leadData.slotsMessageShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM');
-    if(!step4AboutToFire){
-      addMsg('bot',reply);
-    }
+    addMsg('bot',reply);
 
     // ============================================
     // UI TRIGGERS - Show elements, set workflow flags
@@ -1550,6 +1551,15 @@ async function doSend(txt){
       setTimeout(showAddressForm, 600);
     }
 
+    // ADDRESS REDIRECT: If popup is shown but customer asked a question, nudge them back to it
+    const addressPopupVisible = !!document.getElementById('addressBlock');
+    const customerAskedQuestion = /\?/.test(txt) || /how|what|do you|can you|are you|is it|will you|why|when/i.test(txt);
+    if(addressPopupVisible && !leadData.address && customerAskedQuestion){
+      setTimeout(() => {
+        addMsg('bot', "Go ahead and fill in your pickup address in the form above whenever you're ready!");
+      }, 400);
+    }
+
     // PRICE ESTIMATE GIVEN: Detect estimate and set priceShown flag
     const aiGaveEstimate = /looking at around|you're looking at|\$\d+|\bquote\b.*\$|estimate.*\$|\$.*estimate/i.test(reply);
     if(aiGaveEstimate && !leadData.priceShown && hasValidAddress(leadData.address)){
@@ -1557,8 +1567,9 @@ async function doSend(txt){
       syncProgress();
     }
 
-    // STEP 4 TRIGGER: Customer skipped photos and typed a reply — show combined message + slots
-    if(leadData.priceShown && !leadData.slotsMessageShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM')){
+    // STEP 4 TRIGGER: Only fire when customer gives a photo-related response (upload, yes, no, skip)
+    const isPhotoResponse = /no|nope|skip|don't have|dont have|yes|sure|already|just sent|none|not right now/i.test(txt);
+    if(leadData.priceShown && !leadData.slotsMessageShown && !leadData.slotsShown && !leadData.time && !txt.startsWith('[SYSTEM') && isPhotoResponse){
       leadData.slotsMessageShown = true;
       syncProgress();
       setTimeout(() => {
